@@ -29,4 +29,7 @@ Network *create_network(int num_layers, int *layer_sizes, double lr);
 // deallocazione sicura di tutta la memoria
 void free_network(Network *net);
 
+// propagazione per "ragionamento"
+void forward_pass(Network *net, double *input_data);
+
 #endif

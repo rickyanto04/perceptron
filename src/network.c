@@ -70,3 +70,34 @@ void free_network(Network *net) {
     // Libero la struttura principale
     free(net);
 }
+
+void forward_pass(Network *net, double *input_data) {
+
+    if (!net || !input_data) return;
+
+    /* Popola il livello di Input (Layer 0)
+       l'input non subisce elaborazioni, viene solo copiato nella rete*/
+    Layer *input_layer = &net->layers[0];
+    for (int i = 0; i < input_layer->num_neurons; i++) {
+        input_layer->neurons[i].output = input_data[i];
+    }
+
+    // Propagazione in avanti per i layer successivi (Hidden e Output)
+    for (int l = 1; l < net->num_layers; l++) {
+        Layer *current_layer = &net->layers[l];
+        Layer *prev_layer = &net->layers[l - 1]; // Il layer precedente fa da input
+
+        for (int n = 0; n < current_layer->num_neurons; n++) {
+            Neuron *neuron = &current_layer->neurons[n];
+            double sum = neuron->bias;
+
+            // Somma pesata: (peso * output_del_neurone_precedente)
+            for (int w = 0; w < neuron->num_inputs; w++) {
+                sum += neuron->weights[w] * prev_layer->neurons[w].output;
+            }
+
+            // Attivazione non lineare
+            neuron->output = sigmoid(sum);
+        }
+    }
+}
