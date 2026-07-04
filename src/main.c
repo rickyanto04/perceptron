@@ -4,11 +4,41 @@
 #include "network.h"
 #include "neural_math.h"
 
+double* dummy_4_shifted_factory() {
+    /*--- Creazione immagine alterata: barra destra spostata di 1 pixel ---*/
+    double *dummy_image = (double*)malloc(784 * sizeof(double));
+    if (dummy_image == NULL) {
+        fprintf(stderr, "Errore di allocazione per l'immagine sfasata.\n");
+        exit(EXIT_FAILURE);
+    }
+    for (int i = 0; i < 784; i++) {
+        dummy_image[i] = 0.0;
+    }
+
+    // Barra verticale sinistra (Intatta)
+    for (int r = 6; r <= 15; r++){
+        dummy_image[r * 28 + 10] = 1.0;
+    }
+
+    // Barra verticale destra (SPOSTATA dalla colonna 17 alla 18)
+    for (int r = 4; r <= 22; r++){
+        dummy_image[r * 28 + 18] = 1.0;
+    }
+
+    // Barra orizzontale centrale (Allungata di 1 pixel per raccordare)
+    for (int c = 10; c <= 18; c++){
+        dummy_image[15 * 28 + c] = 1.0;
+    }
+
+    return dummy_image;
+}
+
 double* dummy_4_factory() {
 /*--- Creazione immagine fittizia che rappresenta il numero 4 ---*/
     double *dummy_image = (double*)malloc(784 * sizeof(double));
     if (dummy_image == NULL) {
-        exit(1);
+        fprintf(stderr, "Errore di allocazione per l'immagine perfetta.\n");
+        exit(EXIT_FAILURE);
     }
     for (int i = 0; i < 784; i++) {
         dummy_image[i] = 0.0;
@@ -51,37 +81,41 @@ int main() {
     printf("Rete allocata con successo nella memoria Heap!\n");
     printf("Verifica neurone casuale (Hidden Layer, ID 0): Bias = %f\n", nn->layers[1].neurons[0].bias);
 
-    double* dummy_image_4 = dummy_4_factory();
+    double* dummy_4 = dummy_4_factory();
+    double* dummy_4_shifted = dummy_4_shifted_factory();
 
     // Creazione Dato Target (One-Hot Encoding per la classe 4)
     double *target = (double*)malloc(10 * sizeof(double));
+    if (target == NULL) exit(EXIT_FAILURE);
     for (int i = 0; i < 10; i++) target[i] = 0.0;
     target[4] = 1.0; // Vogliamo che il neurone con indice 4 si attivi
 
-    printf("Inizio addestramento su singolo campione (1000 epoche)...\n");
+    printf("Inizio addestramento su singolo campione perfetto (1000 epoche)...\n");
 
     // ciclo di training
     int epochs = 1000;
     for (int e = 0; e < epochs; e++) {
-        forward_pass(nn, dummy_image_4);
+        forward_pass(nn, dummy_4);
         backward_pass(nn, target);
         update_weights(nn);
     }
 
-    printf("Esecuzione forward pass finale per verifica...\n");
-    forward_pass(nn, dummy_image_4);
-
-    printf("\nRisultati Output Layer POST-Addestramento (Target = Classe 4):\n");
+    // Test 1: Verifica sull'immagine perfetta (Controllo)
+    printf("\n--- TEST 1: Forward pass su immagine originale ---\n");
+    forward_pass(nn, dummy_4);
     Layer *output_layer = &nn->layers[num_layers - 1];
-    for (int i = 0; i < output_layer->num_neurons; i++) {
-        // Se tutto funziona, il Neurone 4 avrà un valore > 0.95
-        printf("Neurone %d: probabilita' %.4f\n", i, output_layer->neurons[i].output);
-    }
+    printf("Probabilita' Neurone 4: %.4f\n", output_layer->neurons[4].output);
 
-    free(dummy_image_4);
+    // Test 2: Verifica sull'immagine sfasata (Test di Generalizzazione)
+    printf("\n--- TEST 2: Forward pass su immagine sfasata di 1 pixel ---\n");
+    forward_pass(nn, dummy_4_shifted);
+    printf("Probabilita' Neurone 4 (sfasato): %.4f\n", output_layer->neurons[4].output);
+
+    free(dummy_4);
+    free(dummy_4_shifted);
     free(target);
     free_network(nn);
-    printf("Memoria deallocata correttamente, 0 leaks.\n");
+    printf("\nMemoria deallocata correttamente, 0 leaks.\n");
 
     return 0;
 }
