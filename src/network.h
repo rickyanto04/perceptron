@@ -32,4 +32,10 @@ void free_network(Network *net);
 // propagazione per "ragionamento"
 void forward_pass(Network *net, double *input_data);
 
+// retro propagazione per ottimizzazione
+void backward_pass(Network *net, double *target_data);
+
+// ricalcolo dei pesi
+void update_weights(Network *net);
+
 #endif

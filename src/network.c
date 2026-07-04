@@ -101,3 +101,60 @@ void forward_pass(Network *net, double *input_data) {
         }
     }
 }
+
+// Calcolo dei gradienti a ritroso (Backpropagation)
+void backward_pass(Network *net, double *target_data) {
+    // Calcolo il gradiente per l'Output Layer
+    int output_idx = net->num_layers - 1;
+    Layer *output_layer = &net->layers[output_idx];
+
+    for (int n = 0; n < output_layer->num_neurons; n++) {
+        Neuron *neuron = &output_layer->neurons[n];
+        double error = target_data[n] - neuron->output;
+        // Gradiente = Errore * Derivata Sigmoide
+        neuron->error_grad = error * sigmoid_derivative(neuron->output);
+    }
+
+    // Calcolo il gradiente per gli Hidden Layers partendo dall'ultimo ovviamente
+    for (int l = output_idx - 1; l > 0; l--) {
+        Layer *current_layer = &net->layers[l];
+        Layer *next_layer = &net->layers[l + 1];
+
+        for (int n = 0; n < current_layer->num_neurons; n++) {
+            Neuron *neuron = &current_layer->neurons[n];
+            double sum_error = 0.0;
+
+            // Il neurone n dello strato corrente è connesso al peso n di TUTTI i neuroni dello strato successivo
+            for (int next_n = 0; next_n < next_layer->num_neurons; next_n++) {
+                Neuron *next_neuron = &next_layer->neurons[next_n];
+                sum_error += next_neuron->error_grad * next_neuron->weights[n];
+            }
+
+            // Gradiente = Somma Errori Pesati * Derivata Sigmoide
+            neuron->error_grad = sum_error * sigmoid_derivative(neuron->output);
+        }
+    }
+}
+
+// Aggiornamento effettivo dei pesi (Gradient Descent)
+void update_weights(Network *net) {
+    // Scorriamo tutti i layer, tranne il layer 0 che non ha pesi
+    for (int l = 1; l < net->num_layers; l++) {
+        Layer *current_layer = &net->layers[l];
+        Layer *prev_layer = &net->layers[l - 1];
+
+        for (int n = 0; n < current_layer->num_neurons; n++) {
+            Neuron *neuron = &current_layer->neurons[n];
+
+            // W_nuovo = W_vecchio + (LearningRate * Gradiente * Input)
+            for (int w = 0; w < neuron->num_inputs; w++) {
+                // L'input di questo peso è l'output del neurone corrispondente nel layer precedente
+                double input_val = prev_layer->neurons[w].output;
+                neuron->weights[w] += net->learning_rate * neuron->error_grad * input_val;
+            }
+
+            // Aggiornamento del Bias (l'input del bias è implicitamente 1.0)
+            neuron->bias += net->learning_rate * neuron->error_grad;
+        }
+    }
+}
